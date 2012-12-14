@@ -935,6 +935,44 @@ class NativeUIElement(BaseAXUIElement):
                              clickCount=3)
       self._postQueuedEvents()
 
+   def centerPoint(self):
+      '''Calculates the center point of the object from AXPosition and AXSize.
+
+         Returns the center point as (x, y).
+      '''
+      p = self.AXPosition
+      s = self.AXSize
+      center = (p[0] + s[0] / 2, p[1] + s[1] / 2)
+      return center
+   
+   def click(self, modifiers = []):
+      ''' Click the center point of the object with left mouse button
+          with optional modifiers pressed.
+
+          Parameters: modifiers (list) (e.g. [SHIFT] or
+                      [COMMAND, SHIFT] (assuming you've first used
+                      from pyatom.AXKeyCodeConstants import *))
+          Returns: None
+      '''
+      coord = self.centerPoint()
+      modFlags = self._pressModifiers(modifiers)
+      self._queueMouseButton(coord, Quartz.kCGMouseButtonLeft, modFlags, clickCount = 1)
+      self._releaseModifiers(modifiers)
+      self._postQueuedEvents()
+
+   def doubleClick(self, modifiers = []):
+      ''' Double click the center point of the object with left mouse button
+          with optional modifiers pressed.
+
+          Returns: None
+      '''
+      coord = self.centerPoint()
+      modFlags = self._pressModifiers(modifiers)
+      self._queueMouseButton(coord, Quartz.kCGMouseButtonLeft, modFlags, clickCount=1)
+      self._queueMouseButton(coord, Quartz.kCGMouseButtonLeft, modFlags, clickCount=2)
+      self._releaseModifiers(modifiers)
+      self._postQueuedEvents()
+
    def waitFor(self, timeout, notification, **kwargs):
       '''waitFor - generic wait for a UI event that matches the specified
          criteria to occur.
