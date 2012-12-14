@@ -223,13 +223,16 @@ class BaseAXUIElement(_a11y.AXUIElement):
       if (not hasattr(self, 'keyboard')):
          self.keyboard = AXKeyboard.loadKeyboard()
 
+      modifiers = None
+
       if (keychr in self.keyboard['upperSymbols']):
-         self._sendKeyWithModifiers(keychr, [AXKeyCodeConstants.SHIFT]);
-         return
+	 modifiers = [AXKeyCodeConstants.SHIFT];
+	 modFlags = self._pressModifiers(modifiers)
 
       if (keychr.isupper()):
-         self._sendKeyWithModifiers(keychr.lower(), [AXKeyCodeConstants.SHIFT])
-         return
+	 keychr = keychr.lower()
+	 modifiers = [AXKeyCodeConstants.SHIFT];
+	 modFlags = self._pressModifiers(modifiers)
 
       if (keychr not in self.keyboard):
           self._clearEventQueue()
@@ -257,6 +260,9 @@ class BaseAXUIElement(_a11y.AXUIElement):
       else:
           self._queueEvent(Quartz.CGEventPost, (0, keyDown))
           self._queueEvent(Quartz.CGEventPost, (0, keyUp))
+
+      if modifiers != None:
+         self._releaseModifiers(modifiers)
 
    def _sendKey(self, keychr, modFlags=0, globally=False):
       ''' Send one character with no modifiers
