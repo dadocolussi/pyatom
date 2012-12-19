@@ -1173,3 +1173,16 @@ class NativeUIElement(BaseAXUIElement):
       '''Return a list of sliders with an optional match parameter'''
       return self._convenienceMatchR('AXSlider', 'AXValue', match)
 
+   def tableCell(self, rowIndex, colIndex):
+      # Try to get the cell a few times. This builds in some tolerance
+      # to the application responding slowly when, for example, adding
+      # rows/columns to a table, and then trying to get the newly added
+      # cells.
+      for i in range(10):
+         try:
+	    return self.AXRows[rowIndex].AXChildren[colIndex]
+         except IndexError:
+	    time.sleep(0.1)
+	    continue
+
+      return None
