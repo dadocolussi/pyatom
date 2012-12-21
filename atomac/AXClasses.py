@@ -28,6 +28,7 @@ import AXKeyboard
 import AXCallbacks
 import AXKeyCodeConstants
 
+defaultEventInterval = None
 
 class BaseAXUIElement(_a11y.AXUIElement):
    '''BaseAXUIElement - Base class for UI elements.
@@ -181,15 +182,28 @@ class BaseAXUIElement(_a11y.AXUIElement):
       '''
       self._setTimeout(timeout)
 
-   def _postQueuedEvents(self, interval=0.01):
+   def setDefaultEventInterval(self, interval):
+      global defaultEventInterval
+      defaultEventInterval = interval
+
+   def _postQueuedEvents(self, interval=None):
       ''' Private method to post queued events (e.g. Quartz events)
 
           Each event in queue is a tuple (event call, args to event call)
       '''
+      global defaultEventInterval
+
+      if interval:
+         _interval = interval
+      elif defaultEventInterval:
+         _interval = defaultEventInterval
+      else:
+         _interval = 0.01
+
       while (len(self.eventList) > 0):
          (nextEvent, args) = self.eventList.popleft()
          nextEvent(*args)
-         time.sleep(interval)
+         time.sleep(_interval)
 
    def _clearEventQueue(self):
       ''' Clear the event queue '''
