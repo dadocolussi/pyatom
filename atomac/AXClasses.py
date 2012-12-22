@@ -403,6 +403,21 @@ class BaseAXUIElement(_a11y.AXUIElement):
       # Post the queued keypresses:
       self._postQueuedEvents()
 
+   def _queueMouseMove(self, coord):
+      ''' Private method to handle moving mouse
+
+          Returns: None
+      '''
+      # Create the event
+      eventType = Quartz.kCGEventMouseMoved
+      mouseButton = Quartz.kCGMouseButtonLeft
+      moveMouseEvent = Quartz.CGEventCreateMouseEvent(None, eventType, coord, mouseButton)
+
+      # Queue the event
+      self._queueEvent(Quartz.CGEventPost,
+                       (Quartz.kCGSessionEventTap, moveMouseEvent))
+      self._postQueuedEvents()
+
    def _queueMouseButton(self, coord, mouseButton, modFlags, clickCount=1):
       ''' Private method to handle generic mouse button clicking
 
@@ -959,6 +974,18 @@ class NativeUIElement(BaseAXUIElement):
       center = (p[0] + s[0] / 2, p[1] + s[1] / 2)
       return center
    
+   def moveMouseTo(self, coord):
+      '''Moves the mouse to the given coordinate point.
+         Returns: None
+      '''
+      self._queueMouseMove(coord)
+
+   def moveMouseHere(self):
+      '''Moves the mouse to the center point of this object.
+         Returns: None
+      '''
+      self.moveMouseTo(self.centerPoint())
+
    def click(self, modifiers = []):
       ''' Click the center point of the object with left mouse button
           with optional modifiers pressed.
