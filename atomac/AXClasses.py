@@ -19,6 +19,7 @@ import fnmatch
 import AppKit
 import Quartz
 import time
+import math
 
 from PyObjCTools import AppHelper
 from collections import deque
@@ -417,6 +418,79 @@ class BaseAXUIElement(_a11y.AXUIElement):
       self._queueEvent(Quartz.CGEventPost,
                        (Quartz.kCGSessionEventTap, moveMouseEvent))
       self._postQueuedEvents()
+
+   def _queueMouseDrag(self, fromCoord, toCoord, modFlags):
+      ''' Private method to handle mouse dragging
+
+          Returns: None
+      '''
+      # Press the button
+      buttonDown = Quartz.CGEventCreateMouseEvent(None,
+                                                  Quartz.kCGEventLeftMouseDown,
+                                                  fromCoord,
+                                                  Quartz.kCGMouseButtonLeft)
+      # Set modflags (default None) on button down:
+      Quartz.CGEventSetFlags(buttonDown, modFlags)
+
+      # Set the click count on button down:
+      Quartz.CGEventSetIntegerValueField(buttonDown,
+                                         Quartz.kCGMouseEventClickState,
+                                         1)
+
+      # Queue the event
+      self._queueEvent(Quartz.CGEventPost,
+                       (Quartz.kCGSessionEventTap, buttonDown))
+
+      # Drag in multiple events
+      pointsPerStep = 10
+      dx = math.fabs(fromCoord[0] - toCoord[0])
+      dy = math.fabs(fromCoord[1] - toCoord[1])
+      d = math.sqrt(dx * dx + dy * dy)
+      n = int(d / pointsPerStep) + 1
+
+      if n < 20:
+      	n = 20
+
+      for i in range(n):
+	 if i == 0:
+	    coord = fromCoord
+	 elif i == n - 1:
+	    coord = toCoord
+	 else:
+	    x = fromCoord[0] + (toCoord[0] - fromCoord[0]) * i / n
+	    y = fromCoord[1] + (toCoord[1] - fromCoord[1]) * i / n
+	    coord = (x, y)
+
+         mouseDrag = Quartz.CGEventCreateMouseEvent(None,
+                                                    Quartz.kCGEventLeftMouseDragged,
+                                                    coord,
+                                                    Quartz.kCGMouseButtonLeft)
+         # Set modflags (default None) on drag
+         Quartz.CGEventSetFlags(mouseDrag, modFlags)
+
+         # Set the click count on drag
+         Quartz.CGEventSetIntegerValueField(mouseDrag,
+                                            Quartz.kCGMouseEventClickState,
+                                            1)
+	 # Queue the drag event
+         self._queueEvent(Quartz.CGEventPost,
+                          (Quartz.kCGSessionEventTap, mouseDrag))
+
+      # Release the button
+      buttonUp = Quartz.CGEventCreateMouseEvent(None,
+                                                Quartz.kCGEventLeftMouseUp,
+                                                toCoord,
+                                                Quartz.kCGMouseButtonLeft)
+      # Set modflags on the button up:
+      Quartz.CGEventSetFlags(buttonUp, modFlags)
+
+      # Set the click count on button up:
+      Quartz.CGEventSetIntegerValueField(buttonUp,
+                                         Quartz.kCGMouseEventClickState,
+                                         1)
+      # Queue the event
+      self._queueEvent(Quartz.CGEventPost,
+                       (Quartz.kCGSessionEventTap, buttonUp))
 
    def _queueMouseButton(self, coord, mouseButton, modFlags, clickCount=1):
       ''' Private method to handle generic mouse button clicking
@@ -985,6 +1059,18 @@ class NativeUIElement(BaseAXUIElement):
          Returns: None
       '''
       self.moveMouseTo(self.centerPoint())
+
+   def dragFromTo(self, fromCoord, toCoord, modifiers = []):
+      modFlags = self._pressModifiers(modifiers)
+      self._queueMouseDrag(fromCoord, toCoord, modFlags)
+      self._releaseModifiers(modifiers)
+      self._postQueuedEvents()
+
+   def dragTo(self, toCoord, modifiers = []):
+      self.dragFromTo(self.centerPoint(), toCoord, modifiers)
+
+   def dragOnto(self, object, modifiers = []):
+      self.dragTo(object.centerPoint(), modifiers)
 
    def click(self, modifiers = []):
       ''' Click the center point of the object with left mouse button
