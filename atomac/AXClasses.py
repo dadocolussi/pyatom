@@ -1196,6 +1196,24 @@ class NativeUIElement(BaseAXUIElement):
       return self.waitFor(timeout, 'AXFocusedWindowChanged',
                           AXTitle=nextWinName)
 
+   def waitUntilValueEquals(self, expectedValue, timeouts = [0.2, 0.4, 0.8, 1, 1, 1, 1, 1, 1, 1]):
+      for t in timeouts:
+         if self.AXValue == expectedValue:
+            return True
+
+         time.sleep(t)
+
+      return False
+
+   def waitUntilEnabled(self, timeouts = [0.2, 0.4, 0.8, 1, 1, 1, 1, 1, 1, 1]):
+      for t in timeouts:
+         if self.AXEnabled:
+            return self
+
+         time.sleep(t)
+
+      return None
+
    def _convenienceMatch(self, role, attr, match):
       '''Method used by role based convenience functions to find a match'''
       kwargs = {}
