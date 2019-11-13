@@ -29,6 +29,7 @@ from . import AXKeyboard
 from . import AXCallbacks
 from . import AXKeyCodeConstants
 
+defaultEventInterval = 0.01
 
 class BaseAXUIElement(_a11y.AXUIElement):
     """Base class for UI elements. Implements four major things:
@@ -209,15 +210,21 @@ class BaseAXUIElement(_a11y.AXUIElement):
         """
         self._setTimeout(timeout)
 
-    def _postQueuedEvents(self, interval=0.01):
+    def setDefaultEventInterval(self, interval):
+        global defaultEventInterval
+        defaultEventInterval = interval
+
+    def _postQueuedEvents(self, interval=None):
         """Private method to post queued events (e.g. Quartz events).
 
         Each event in queue is a tuple (event call, args to event call).
         """
+        #if not interval:
+        #    interval = eventInterval
         while len(self.eventList) > 0:
             (nextEvent, args) = self.eventList.popleft()
             nextEvent(*args)
-            time.sleep(interval)
+            time.sleep(interval or defaultEventInterval)
 
     def _clearEventQueue(self):
         """Clear the event queue."""
@@ -1155,6 +1162,23 @@ class NativeUIElement(BaseAXUIElement):
                                clickCount=3)
         self._postQueuedEvents()
 
+    def click(self, modifiers = []):
+        ''' Click the center point of the object with left mouse button
+            with optional modifiers pressed.
+            Returns: None
+        '''
+        if modifiers:
+            self.clickMouseButtonLeftWithMods(self.centerPoint(), modifiers)
+        else:
+            self.clickMouseButtonLeft(self.centerPoint())
+
+    def doubleClick(self, modifiers = []):
+        ''' Double click the center point of the object with left mouse button
+            with optional modifiers pressed.
+            Returns: None
+        '''
+        self.doubleMouseButtonLeftWithMods(self.centerPoint(), modifiers)
+
     def waitFor(self, timeout, notification, **kwargs):
         """Generic wait for a UI event that matches the specified
         criteria to occur.
@@ -1252,6 +1276,20 @@ class NativeUIElement(BaseAXUIElement):
         return self.waitFor(timeout, 'AXFocusedWindowChanged',
                             AXTitle=nextWinName)
 
+    def waitUntilValueEquals(self, expectedValue, timeouts = [0.2, 0.4, 0.8, 1, 1, 1, 1, 1, 1, 1]):
+        for t in timeouts:
+            if self.AXValue == expectedValue:
+                return True
+            time.sleep(t)
+        return False
+
+    def waitUntilEnabled(self, timeouts = [0.2, 0.4, 0.8, 1, 1, 1, 1, 1, 1, 1]):
+        for t in timeouts:
+            if self.AXEnabled:
+                return self
+            time.sleep(t)
+        return None
+
     def _convenienceMatch(self, role, attr, match):
         """Method used by role based convenience functions to find a match"""
         kwargs = {}
@@ -1269,6 +1307,15 @@ class NativeUIElement(BaseAXUIElement):
         if match:
             kwargs[attr] = match
         return self.findAllR(AXRole=role, **kwargs)
+
+    def centerPoint(self):
+       '''Calculates the center point of the object from AXPosition and AXSize.
+          Returns the center point as (x, y).
+       '''
+       p = self.AXPosition
+       s = self.AXSize
+       center = (p[0] + s[0] / 2, p[1] + s[1] / 2)
+       return center
 
     def textAreas(self, match=None):
         """Return a list of text areas with an optional match parameter."""
@@ -1366,3 +1413,17 @@ class NativeUIElement(BaseAXUIElement):
     def slidersR(self, match=None):
         """Return a list of sliders with an optional match parameter."""
         return self._convenienceMatchR('AXSlider', 'AXValue', match)
+
+    def tableCell(self, rowIndex, colIndex):
+        # Try to get the cell a few times. This builds in some tolerance
+        # to the application responding slowly when, for example, adding
+        # rows/columns to a table, and then trying to get the newly added
+        # cells.
+        for i in range(10):
+            try:
+                return self.AXRows[rowIndex].AXChildren[colIndex]
+            except IndexError:
+                time.sleep(0.1)
+                continue
+            return None
+
