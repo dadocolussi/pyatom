@@ -310,14 +310,14 @@ class BaseAXUIElement(_a11y.AXUIElement):
         self._addKeyToQueue(keychr, modFlags, globally=globally)
         self._postQueuedEvents()
 
-    def _sendKeys(self, keystr):
+    def _sendKeys(self, keystr, globally=False):
         """Send a series of characters with no modifiers.
 
         Parameters: keystr
         Returns: None or raise ValueError exception
         """
         for nextChr in keystr:
-            self._sendKey(nextChr)
+            self._sendKey(nextChr, globally=globally)
 
     def _pressModifiers(self, modifiers, pressed=True, globally=False):
         """Press given modifiers (provided in list form).
@@ -988,6 +988,10 @@ class NativeUIElement(BaseAXUIElement):
     def sendKeys(self, keystr):
         """Send a series of characters with no modifiers."""
         return self._sendKeys(keystr)
+
+    def sendGlobalKeys(self, keystr):
+        """Send a series of characters with no modifiers to the system."""
+        return self._sendKeys(keystr, globally=True)
 
     def pressModifiers(self, modifiers):
         """Hold modifier keys (e.g. [Option])."""
